@@ -2,6 +2,7 @@ const Category = require('../models/Category')
 const Product = require('../models/Product')
 const File = require('../models/File')
 const { formatPrice, date } = require('../../lib/utils')
+const db = require('../../config/db')
 
 
 module.exports = {
@@ -93,17 +94,17 @@ module.exports = {
 
         if (req.files.lenght != 0) {
             const newFilesPromise = req.files.map(file => 
-                File.create({...file, product_id: req.body.id}))
+                File.create({...file, product_id: req.params.id}))
 
             await Promise.all(newFilesPromise)
         }
 
         if (req.body.removed_files) {
-            const removedFiles = req.body.removed_files.split(",")
-            const lastIndex = removedFiles.lenght - 1
-            removedFiles.splice(lastIndex, 1)
+            const removedFiles = req.body.removed_files.split(',');
 
-            const removedFilesPromise = removedFiles.map(file => File.delete(id))
+            removedFiles.splice(removedFiles.length - 1, 1);
+
+            const removedFilesPromise = removedFiles.map(id => File.delete(id))
             await Promise.all(removedFilesPromise)
         }
 
