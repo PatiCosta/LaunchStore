@@ -1,5 +1,7 @@
 const db = require('../../config/db')
 const { hash } = require('bcryptjs')
+const Product = require("../models/Product")
+const fs = require('fs')
 
 module.exports = {
     async findOne(filters) {
@@ -19,7 +21,6 @@ module.exports = {
 
         return results.rows[0]
     },
-
     async create(data) {
         try {
             const query = `
@@ -41,7 +42,7 @@ module.exports = {
             const values = [
                 data.name,
                 data.email,
-                data.passwordHash,
+                passwordHash,
                 data.cpf_cnpj.replace(/\D/g, ""),
                 data.cep.replace(/\D/g, ""),
                 data.address
@@ -53,6 +54,55 @@ module.exports = {
         } catch(err) {
             console.error(err)
         }
+        
+    },
+    async update(id, fields) {
+        let query = "UPDATE users SET"
+
+        Object.keys(fields).map((key, index, array) => {
+            if ((index +1) < array.length) {
+                // linhas com virgula
+                query = `${query}
+                    ${key} = '${fields[key]}',    
+                `
+            } else {
+                // ultima linha sem virgula
+                query = `${query}
+                    ${key} = '${fields[key]}' 
+                    WHERE id = ${id}   
+                `
+            }
+        })
+
+        await db.query(query)
+
+        return 
+    },
+    async delete(id) {
+        // get all products
+        let results = await db.query('SELECT * FROM products WHERE user_id = $1', [id])
+        const products = results.rows
+
+        // get all images
+        const allFilesPromise = products.map(product => 
+            Product.files(product.id))
+
+        let promiseResults = await Promise.all(allFilesPromise)
+
+        // remove user
+        await db.query('DELETE FROM users WHERE id = $1', [id])
+
+        // remove all images from public folder
+        promiseResults.map(results => {
+            results.rows.map(file => {
+                try{
+                    fs.unlinkSync(file.path)
+                } catch (err) {
+                    console.error(err)
+                }
+            
+            })
+        })
         
     }
 }
