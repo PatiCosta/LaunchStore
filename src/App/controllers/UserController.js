@@ -1,7 +1,11 @@
-const User = require('../models/User')
 const { formatCep, formatCpfCnpj } = require('../../lib/utils')
-const user = require('../validators/user')
+const { hash } = require('bcryptjs')
+const { unlinkSync } = require('fs')
 
+const User = require('../models/User')
+const Product = require('../models/Product')
+
+const LoadProductsService = require('../services/LoadProductService')
 
 module.exports = {
     registerForm (req, res) {
@@ -9,21 +13,43 @@ module.exports = {
         return res.render("users/register")
     },
     async show(req, res) {
+        try {
+            const { user } = req
 
-        const { user } = req
+            user.cpf_cnpj = formatCpfCnpj(user.cpf_cnpj)
+            user.cep = formatCep(user.cep)
 
-        user.cpf_cnpj = formatCpfCnpj(user.cpf_cnpj)
-        user.cep = formatCep(user.cep)
-
-        return res.render('users/index', {user})
+            return res.render('users/index', {user})
+            
+        } catch (error) {
+            console.error();
+        }
     },
     async post(req, res) {
+        try {
+            let { name, email, password, cpf_cnpj, cep, address} = req.body
+            
+            password = await hash(password, 8)
+            cpf_cnpj = cpf_cnpj.replace(/\D/g, "")
+            cep = cep.replace(/\D/g, "")
+
+            const userId = await User.create({
+                name,
+                email,
+                password,
+                cpf_cnpj,
+                cep,
+                address
+            })
+
+            req.session.userId = userId
+
+            return res.redirect('/users')
+            
+        } catch (error) {
+            console.error(error);
+        }
         
-        const userId = await User.create(req.body)
-
-        req.session.userId = userId
-
-        return res.redirect('/users')
     },
     async update(req, res) {
         try {
@@ -56,9 +82,26 @@ module.exports = {
     },
     async delete (req, res) {
         try {
-            await User.delete(req.body.id)
+            const products = await Product.findAll({where: {uder_id: req.body.id}})
 
+            const allFilesPromise = products.map(product => 
+                Product.files(product.id)
+            )
+    
+            let promiseResults = await Promise.all(allFilesPromise)
+
+            await User.delete(req.body.id)
             req.session.destroy()
+
+            promiseResults.map(files => {
+                files.map(file => {
+                    try {
+                        unlinkSync(file.path)
+                    } catch (error) {
+                        console.error(error);
+                    }
+                })
+            })
 
             return res.render("session/login", {
                 succes: "Conta deletada com sucesso"
@@ -71,5 +114,12 @@ module.exports = {
                 error: "Erro ao tentar deletar sua conta!"
             })
         }
+    },
+    async ads (req, res) {
+        const products = await LoadProductsService.load('products', {
+            where: { user_id: req.session.userId }
+        })
+
+        return res.render('user/ads', {products})
     }
 }

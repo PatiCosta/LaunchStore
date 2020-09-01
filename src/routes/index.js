@@ -6,7 +6,6 @@ const HomeController = require('../App/controllers/HomeController')
 const products = require('./products')
 const users = require('./users')
 
-
 routes.get('/', HomeController.index)
 
 routes.use('/products', products)

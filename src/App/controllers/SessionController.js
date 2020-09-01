@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const User = require('../models/User')
 const mailer = require('../../lib/mailer')
 const {hash} = require('bcryptjs')
+
 module.exports = {
     loginForm(req, res) {
         return res.render("session/login")

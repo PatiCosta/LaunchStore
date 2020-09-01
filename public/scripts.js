@@ -1,20 +1,4 @@
-// const input = document.querySelector('input[name="price"]')
-// input.addEventListener("keydown", function(e) {
 
-//     setTimeout(function(){
-//         let {value} = e.target
-
-//         value = value.replace(/\D/g,"")
-
-//         value = new Intl.NumberFormat('pt-BR', {
-//             style: 'currency',
-//             currency: 'BRL'
-//         }).format(value/100)
-
-//         e.target.value = value
-
-//     }, 1)
-// })
 
 const Mask = {
     apply(input, func) {
@@ -285,6 +269,24 @@ const Validate = {
         return {
             error,
             value
+        }
+    },
+    allFields(e) {
+        const items = document.querySelectorAll(' .item input, .item select, .item textarea')
+        
+        for ( item of items ) {
+            if(item.value == "" ){
+                const message = document.createElement('div')
+                message.classList.add('messages')
+                message.classList.add('error')
+                message.style.position = 'fixed'
+
+                message.innerHTML = 'Todos os campos são obrigatórios'
+
+                document.querySelector('body').append(message)
+
+                e.preventDefault()
+            }
         }
     }
 }
